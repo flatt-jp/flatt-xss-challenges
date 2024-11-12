@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Safe HTML Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .editor {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .editor textarea,
+        .editor .preview {
+            width: 300px;
+            height: 300px;
+            border: 1px solid black;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .buttons button {
+            padding: 10px 20px;
+            background-color: #00f;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        .buttons button:hover {
+            background-color: #0055ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Super Safe HTML Editor</h1>
+        <div class="editor">
+            <div class="input-section">
+                <label for="input">Input</label><br>
+                <textarea id="input" maxlength="100"></textarea>
+            </div>
+            <div class="buttons">
+                <button onclick="saveContent()">Save</button>
+            </div>
+            <div class="preview-section">
+                <label for="preview">Preview</label><br>
+                <div id="preview" class="preview"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SANITIZER_CONFIG = {
+            DANGEROUS_TAGS: [
+                'script',
+                'iframe',
+                'style',
+                'object',
+                'embed',
+                'meta',
+                'link',
+                'base',
+                'frame',
+                'frameset',
+                'svg',
+                'math',
+                'template',
+            ],
+
+            ALLOW_ATTRIBUTES: false
+        }
+
+        function sanitizeHtml(html) {
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            const nodeIterator = doc.createNodeIterator(doc, NodeFilter.SHOW_ELEMENT);
+
+            while (nodeIterator.nextNode()) {
+                const currentNode = nodeIterator.referenceNode;
+                if (typeof currentNode.nodeName !== "string" || !(currentNode.attributes instanceof NamedNodeMap) || typeof currentNode.remove !== "function" || typeof currentNode.removeAttribute !== "function") {
+                    console.warn("DOM Clobbering detected!");
+                    return "";
+                }
+                if (SANITIZER_CONFIG.DANGEROUS_TAGS.includes(currentNode.nodeName.toLowerCase())) {
+                    currentNode.remove();
+                } else if (!SANITIZER_CONFIG.ALLOW_ATTRIBUTES && currentNode.attributes) {
+                    for (const attribute of currentNode.attributes) {
+                        currentNode.removeAttribute(attribute.name);
+                    }
+                }
+            }
+
+            return doc.body.innerHTML;
+        }
+
+        async function saveContent() {
+            const input = document.getElementById('input').value;
+            const resp = await fetch('/', {
+                method: 'POST',
+                body: input
+            });
+            if (resp.ok) {
+                const draft_id = await resp.text();
+                location.href = `/?draft_id=${draft_id}`;
+            } else {
+                alert('Failed to save content!');
+            }
+        }
+
+        function previewContent() {
+            const input = document.getElementById('input').value;
+            document.getElementById('preview').innerHTML = sanitizeHtml(input); // just in case
+        }
+
+        window.onload = async function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('draft_id')) {
+                const resp = await fetch(`/api/drafts?id=${encodeURIComponent(params.get('draft_id'))}`);
+                const content = await resp.text();
+                document.getElementById('input').value = content.slice(0, 100);
+                previewContent();
+            }
+        }
+    </script>
+</body>
+</html>

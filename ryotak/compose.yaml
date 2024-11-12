@@ -1,0 +1,6 @@
+services:
+  app:
+    restart: always
+    build: .
+    ports:
+      - '3002:3002'

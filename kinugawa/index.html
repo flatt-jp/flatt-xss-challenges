@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none';script-src 'sha256-EojffqsgrDqc3mLbzy899xGTZN4StqzlstcSYu24doI=' cdnjs.cloudflare.com; style-src 'unsafe-inline'; frame-src blob:">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.0/purify.min.js" integrity="sha512-AFNgsjnDsfr0u42G9O1u+r+XewdzK7zUIgenHJ4ZbklTMzFgHZ81xmtNSkbDt/SARHrTwfCP1Vec9T7fr7WrMA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+  <h1>Simple HTML viewer for beginners</h1>
+  <p>Hi, HTML beginners! Let's check how elements look.</p>
+  <p>Note: To make it easier, confusing elements and all attributes are removed here.</p>
+  <h2>Write HTML here:</h2>
+  <textarea id="input" style="width: 80%;height:200px;display: block;"></textarea>
+  <button id="render">Render it</button> <span>Permalink:<input id="permalink" size="140"></span>
+  <h2>Rendering result:</h2>
+  <iframe name="iframe" style="width: 80%;height:200px"></iframe>
+  <h2>Examples</h2>
+  <ul id="htmlExamples">
+    <li><a id="strong" href="#">&lt;strong&gt; tag</a>
+    <li><a id="strike" href="#">&lt;strike&gt; tag</a>
+    <li><a id="h1" href="#">&lt;h1&gt; tag</a>
+    <li><a id="marquee" href="#">&lt;marquee&gt; tag</a>
+  </ul>
+
+  <script>
+    const renderButton = document.getElementById('render');
+    const input = document.getElementById('input');
+    const htmlExamples = document.getElementById('htmlExamples');
+    const permalink = document.getElementById('permalink');
+
+    renderButton.addEventListener('click', () => {
+      render(input.value);
+    });
+
+    htmlExamples.addEventListener('click', (event) => {
+      if (event.target.tagName === 'A') {
+        render(`<${event.target.id}>test`);
+        event.preventDefault();
+      }
+      return false;
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      let params = new URLSearchParams(document.location.search);
+      let html = params.get("html");
+      if (html) {
+        input.value = html;
+        render(html);
+      }
+    });
+
+    function render(html) {
+      const sanitizedHtml = DOMPurify.sanitize(html, { ALLOWED_ATTR: [], ALLOW_ARIA_ATTR: false, ALLOW_DATA_ATTR: false });
+      const blob = new Blob([sanitizedHtml], { "type": "text/html" });
+      const blobURL = URL.createObjectURL(blob);
+      input.value = sanitizedHtml;
+      window.open(blobURL, "iframe");
+      createPermalink(sanitizedHtml);
+    }
+
+    function createPermalink(html) {
+      let url = new URL(location.origin);
+      url.pathname = location.pathname;
+      url.searchParams.set('html', html);
+      permalink.value = url.toString();
+    }
+  </script>
+</body>
+
+</html>
